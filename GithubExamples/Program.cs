@@ -17,6 +17,7 @@ namespace GithubExamples {
         
         static async Task Main(string[] args) {
             var githubApi = new GithubApi();
+            githubApi.oauthToken = args[0];
             var gitRepositories = await githubApi.GetRepositories();
             string reposList = JsonConvert.SerializeObject(gitRepositories, Formatting.Indented);
 
@@ -26,7 +27,7 @@ namespace GithubExamples {
     
     public class GithubApi {
         const string GithubEndpoint = "api.github.com";
-        const string oauthToken = "98ae622d10d0deffb44dd6fac3278776471e6859";
+        public string oauthToken;
         const string ExamplesRepository = "DevExpress-Examples";
         
         static string getRepositories = $"/users/{ExamplesRepository}/repos";
@@ -36,7 +37,7 @@ namespace GithubExamples {
         static string repositoriesPath = "/repos/Agitto/TeamcityExamples/contents/.teamcity/repos.json";
 
         public async Task<IEnumerable<GitRepository>> GetRepositories() {
-            string[] repoToIgnore = {"t506284", "t294259", "t223734", "t279098", "t295653", "t297553", "t326911", "t499167", "t243160", "t221404", "t257726", "t178764", "t608114", "t208848", };
+            string[] repoToIgnore = { "t506284", "t294259", "t223734", "t279098", "t295653", "t297553", "t326911", "t499167", "t243160", "t221404", "t257726", "t178764", "t608114", "t208848" };
             
             List<GitRepository> repositories = new List<GitRepository>();
             int page = 1;
@@ -65,12 +66,9 @@ namespace GithubExamples {
                 }
             }
             
-
             return repositories;
         }
 
-        
-        
         public async Task UpdateRepositoriesList(string repositories) {
             var gitRepositories = await DoRequest<GitRepository[]>("/users/Agitto/repos");
             GitRepository examplesRepo = gitRepositories.First(repo => repo.name.Contains("Teamcity"));
@@ -102,7 +100,6 @@ namespace GithubExamples {
                 Path = repositoriesPath
             };
             
-            
             using(client) {
                 var response = await client.PutAsync(uriBuilder.Uri, byteContent);
             }
@@ -125,7 +122,9 @@ namespace GithubExamples {
         }
 
         public async Task<Tree> GetTree(string treeUrl) {
-            return await DoRequest<Tree>(treeUrl, new Dictionary<string, string>() {{"recursive", "true"}});
+            return await DoRequest<Tree>(treeUrl, new Dictionary<string, string> {
+                { "recursive", "true" }
+            });
         }
 
         void SetupAuthHeaders(HttpClient client) {
