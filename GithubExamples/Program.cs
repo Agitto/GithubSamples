@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
@@ -18,6 +20,8 @@ namespace GithubExamples {
         static async Task Main(string[] args) {
             var githubApi = new GithubApi();
             githubApi.oauthToken = args[1];
+            // await githubApi.UpdateRepositoriesList("reposList");
+            Console.WriteLine("getting repositories...");
             var gitRepositories = await githubApi.GetRepositories();
             string reposList = JsonConvert.SerializeObject(gitRepositories, Formatting.Indented);
 
@@ -56,6 +60,7 @@ namespace GithubExamples {
             }
 
             foreach(var gitRepository in repositories) {
+                Console.WriteLine($"found {gitRepository.name}");
                 var branches = await GetBranches(gitRepository.branches_url);
                 gitRepository.Branches.AddRange(branches);
                 
@@ -77,10 +82,19 @@ namespace GithubExamples {
             string treeUrl = string.Format("/repos/Agitto" + "/{0}/git/trees/{1}", examplesRepo.name, master.commit.sha);
             var tree = await GetTree(treeUrl);
             TreeEntry reposFile = tree.tree.FirstOrDefault(file => file.path.Contains("repos.json"));
+            var currentContent = await DoRequest<GitFileContent>(repositoriesPath);
+            var repositoriesBase64 = Base64Encode(repositories);
 
+            var decodedContent = Base64Decode(currentContent.content);
+            if(decodedContent == repositories) {
+                Console.WriteLine("nothing new");
+                return;
+            }
+            
+            Console.WriteLine("adding new examples...");
             var commit = new CommitContent() {
                 message = "update repositories",
-                content = Base64Encode(repositories),
+                content = repositoriesBase64,
                 sha = reposFile?.sha
             };
             
@@ -109,11 +123,10 @@ namespace GithubExamples {
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
             return System.Convert.ToBase64String(plainTextBytes);
         }
-
-        public class CommitContent {
-            public string message { get; set; }
-            public string content { get; set; }
-            public string sha { get; set; }
+        
+        public static string Base64Decode(string base64EncodedData) {
+            var base64EncodedBytes = System.Convert.FromBase64String(base64EncodedData);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
 
         public async Task<IEnumerable<GitBranch>> GetBranches(string branchesUrl) {
@@ -198,5 +211,15 @@ namespace GithubExamples {
     public class TreeEntry {
         public string path { get; set; }
         public string sha { get; set; }
+    }
+
+    public class CommitContent {
+        public string message { get; set; }
+        public string content { get; set; }
+        public string sha { get; set; }
+    }
+    
+    public class GitFileContent : TreeEntry {
+        public string content { get; set; }
     }
 }
