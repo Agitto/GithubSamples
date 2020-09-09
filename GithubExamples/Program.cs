@@ -18,6 +18,9 @@ namespace GithubExamples {
         static async Task Main(string[] args) {
             var githubApi = new GithubApi();
             githubApi.oauthToken = args[0];
+            foreach(string s in args) {
+                Console.WriteLine(s);
+            }
             var gitRepositories = await githubApi.GetRepositories();
             string reposList = JsonConvert.SerializeObject(gitRepositories, Formatting.Indented);
 
